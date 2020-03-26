@@ -71,11 +71,11 @@ def main():
     while True:
         
         try:
-            all_homeworks = get_homework_statuses(current_timestamp)
-            new_homework = all_homeworks.get('homeworks')[0]
-            if new_homework:
-                send_message(parse_homework_status(new_homework))
-            current_timestamp = new_homework.get('current_date')
+            homework = get_homework_statuses(current_timestamp)
+            new_homework = homework.get('homeworks')
+            if len(new_homework) > 0:
+                send_message(parse_homework_status(new_homework[0]))
+            current_timestamp = homework.get('current_date')
             time.sleep(300)
 
         except Exception as e:
