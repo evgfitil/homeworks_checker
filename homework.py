@@ -39,15 +39,21 @@ def get_homework_statuses(current_timestamp):
             headers=headers,
             params=params
         )
-    
-    except requests.exceptions.RequestException as e:
-        raise bot_interrupt(e)
-    
-    if homework_statuses.json().get('source'):
-        e = homework_statuses.json().get('message')
-        raise bot_interrupt(e)
 
-    return homework_statuses.json()
+    except requests.exceptions.RequestException as e:
+        bot_interrupt(e)
+
+    homeworks = homework_statuses.json()
+
+    '''
+    Далее мой IF проверяет есть ли ключ 'source' в Json'е. Этот ключ появлятся в ответе от API сервера
+    в том случае, есле переданы некорректные данные
+    '''
+    if homeworks.get('source'):
+        e = homeworks.get('message')
+        bot_interrupt(e)
+
+    return homeworks
 
 
 def send_message(message):
@@ -69,17 +75,17 @@ def main():
     current_timestamp = int(time.time())
 
     while True:
-        
+
         try:
             homework = get_homework_statuses(current_timestamp)
             new_homework = homework.get('homeworks')
-            if len(new_homework) > 0:
+            if new_homework is not None:
                 send_message(parse_homework_status(new_homework[0]))
             current_timestamp = homework.get('current_date')
             time.sleep(900)
 
         except Exception as e:
-            raise bot_interrupt(e)
+            bot_interrupt(e)
 
 
 if __name__ == '__main__':
