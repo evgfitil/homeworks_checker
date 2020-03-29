@@ -23,10 +23,6 @@ if ENVIRONMENT == 'dev':
 elif ENVIRONMENT == 'prod':
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
-session = requests.Session()
-adapter = requests.adapters.HTTPAdapter(max_retries=10)
-session.mount('https://', adapter)
-
 
 def parse_homework_status(homework):
     homework_name = homework['homework_name']
@@ -42,7 +38,7 @@ def get_homework_statuses(current_timestamp):
     url = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
     params = {'from_date': current_timestamp}
     try:
-        homework_statuses = session.get(
+        homework_statuses = requests.get(
             url,
             headers=headers,
             params=params
