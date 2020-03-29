@@ -20,7 +20,7 @@ if ENVIRONMENT == 'dev':
     proxy_url = 'socks5://134.209.100.103:49616'
     proxy = telegram.utils.request.Request(proxy_url=proxy_url)
     bot = telegram.Bot(token=TELEGRAM_TOKEN, request=proxy)
-else:
+elif ENVIRONMENT == 'prod':
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
 session = requests.Session()
