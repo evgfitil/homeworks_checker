@@ -1,5 +1,6 @@
 import os
 import time
+import sys
 
 import requests
 import telegram
@@ -13,10 +14,18 @@ load_dotenv()
 PRAKTIKUM_TOKEN = os.getenv("PRAKTIKUM_TOKEN")
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+ENVIRONMENT = os.getenv('ENVIRONMENT')
 
-proxy_url = 'socks5://134.209.100.103:49616'
-proxy = telegram.utils.request.Request(proxy_url=proxy_url)
-bot = telegram.Bot(token=TELEGRAM_TOKEN, request=proxy)
+if ENVIRONMENT == 'dev':
+    proxy_url = 'socks5://134.209.100.103:49616'
+    proxy = telegram.utils.request.Request(proxy_url=proxy_url)
+    bot = telegram.Bot(token=TELEGRAM_TOKEN, request=proxy)
+else:
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
+
+session = requests.Session()
+adapter = requests.adapters.HTTPAdapter(max_retries=10)
+session.mount('https://', adapter)
 
 
 def parse_homework_status(homework):
@@ -32,32 +41,29 @@ def get_homework_statuses(current_timestamp):
     headers = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
     url = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
     params = {'from_date': current_timestamp}
-
     try:
-        homework_statuses = requests.get(
+        homework_statuses = session.get(
             url,
             headers=headers,
             params=params
         )
+        homework_statuses.raise_for_status()
 
-    except requests.exceptions.RequestException as e:
-        bot_interrupt(e)
+    except requests.HTTPError as http_err:
+        bot_interrupt(http_err)
+
+    try:
+        homework_statuses.json()
+    except ValueError:
+        bot_interrupt('Error response data')
 
     homeworks = homework_statuses.json()
-
-    '''
-    Далее мой IF проверяет есть ли ключ 'source' в Json'е. Этот ключ появлятся в ответе от API сервера
-    в том случае, есле переданы некорректные данные
-    '''
-    if homeworks.get('source'):
-        e = homeworks.get('message')
-        bot_interrupt(e)
 
     return homeworks
 
 
 def send_message(message):
-
+    
     return bot.send_message(
         chat_id=CHAT_ID, 
         text=message,
@@ -66,9 +72,10 @@ def send_message(message):
     )
 
 
-def bot_interrupt(e):
-    response = f'Работа бота остановлена. Ошибка: {e}'
-    return SystemExit(response)
+def bot_interrupt(err_message):
+    response = f'Работа бота остановлена. Ошибка: {err_message}'
+    print(response)
+    sys.exit(1)
 
 
 def main():
