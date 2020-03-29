@@ -47,7 +47,7 @@ def get_homework_statuses(current_timestamp):
             headers=headers,
             params=params
         )
-        homework_statuses.raise_for_status()
+        # homework_statuses.raise_for_status()
 
     except requests.HTTPError as http_err:
         bot_interrupt(http_err)
