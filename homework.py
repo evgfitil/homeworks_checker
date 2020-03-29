@@ -85,8 +85,8 @@ def main():
 
         try:
             homework = get_homework_statuses(current_timestamp)
-            new_homework = homework.get('homeworks')
-            if new_homework is not None:
+            new_homework = homework.get('homeworks', '')
+            if new_homework:
                 send_message(parse_homework_status(new_homework[0]))
             current_timestamp = homework.get('current_date')
             time.sleep(900)
