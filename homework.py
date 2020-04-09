@@ -16,17 +16,6 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 ENVIRONMENT = os.getenv('ENVIRONMENT')
 
-if ENVIRONMENT == 'dev':
-    proxy_url = 'socks5://134.209.100.103:49616'
-    proxy = telegram.utils.request.Request(proxy_url=proxy_url)
-    bot = telegram.Bot(token=TELEGRAM_TOKEN, request=proxy)
-elif ENVIRONMENT == 'prod':
-    bot = telegram.Bot(token=TELEGRAM_TOKEN)
-
-session = requests.Session()
-adapter = requests.adapters.HTTPAdapter(max_retries=10)
-session.mount('https://', adapter)
-
 
 def parse_homework_status(homework):
     homework_name = homework['homework_name']
@@ -37,7 +26,7 @@ def parse_homework_status(homework):
     return f'У вас проверили работу "{homework_name}"!\n\n{verdict}'
 
 
-def get_homework_statuses(current_timestamp):
+def get_homework_statuses(session, current_timestamp):
     headers = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
     url = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
     params = {'from_date': current_timestamp}
@@ -51,18 +40,13 @@ def get_homework_statuses(current_timestamp):
 
     except requests.HTTPError as http_err:
         bot_interrupt(http_err)
+    except requests.RequestException:
+        return {}
 
-    try:
-        homework_statuses.json()
-    except ValueError:
-        bot_interrupt('Error response data')
-
-    homeworks = homework_statuses.json()
-
-    return homeworks
+    return homework_statuses.json()
 
 
-def send_message(message):
+def send_message(bot, message):
     
     return bot.send_message(
         chat_id=CHAT_ID, 
@@ -81,13 +65,24 @@ def bot_interrupt(err_message):
 def main():
     current_timestamp = int(time.time())
 
+    if ENVIRONMENT == 'dev':
+        proxy_url = 'socks5://134.209.100.103:49616'
+        proxy = telegram.utils.request.Request(proxy_url=proxy_url)
+        bot = telegram.Bot(token=TELEGRAM_TOKEN, request=proxy)
+    elif ENVIRONMENT == 'prod':
+        bot = telegram.Bot(token=TELEGRAM_TOKEN)
+
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(max_retries=10)
+    session.mount('https://', adapter)
+
     while True:
 
         try:
-            homework = get_homework_statuses(current_timestamp)
+            homework = get_homework_statuses(session, current_timestamp)
             new_homework = homework.get('homeworks', '')
             if new_homework:
-                send_message(parse_homework_status(new_homework[0]))
+                send_message(bot, parse_homework_status(new_homework[0]))
             current_timestamp = homework.get('current_date')
             time.sleep(900)
 
