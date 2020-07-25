@@ -14,7 +14,6 @@ load_dotenv()
 PRAKTIKUM_TOKEN = os.getenv("PRAKTIKUM_TOKEN")
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-ENVIRONMENT = os.getenv('ENVIRONMENT')
 
 
 def parse_homework_status(homework):
@@ -27,9 +26,11 @@ def parse_homework_status(homework):
 
 
 def get_homework_statuses(session, current_timestamp):
+    current_timestamp = current_timestamp or int(time.time())
     headers = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
     url = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
-    params = {'from_date': 0}
+    params = {'from_date': current_timestamp}
+    
     try:
         homework_statuses = session.get(
             url,
@@ -64,13 +65,7 @@ def bot_interrupt(err_message):
 
 def main():
     current_timestamp = int(time.time())
-
-    if ENVIRONMENT == 'dev':
-        proxy_url = 'socks5://134.209.100.103:49616'
-        proxy = telegram.utils.request.Request(proxy_url=proxy_url)
-        bot = telegram.Bot(token=TELEGRAM_TOKEN, request=proxy)
-    elif ENVIRONMENT == 'prod':
-        bot = telegram.Bot(token=TELEGRAM_TOKEN)
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
 
     session = requests.Session()
     adapter = requests.adapters.HTTPAdapter(max_retries=10)
@@ -83,7 +78,7 @@ def main():
             if new_homework.get('homeworks'):
                 send_message(bot, parse_homework_status(new_homework.get('homeworks')[0]))
             current_timestamp = new_homework.get('current_date')
-            time.sleep(900)
+            time.sleep(300)
 
         except Exception as e:
             bot_interrupt(e)
