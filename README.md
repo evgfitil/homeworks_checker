@@ -1,2 +1,3 @@
-# api_sp1_bot
-api sp1 bot
+# homeworks_checker
+
+Homeworks checker - личный бот-ассистент для получения статуса проверки домашнего задания код-ревьювером.
